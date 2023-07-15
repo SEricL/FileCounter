@@ -1,7 +1,6 @@
 import os
 import os.path
 import re
-import time
 from tkinter import ttk
 from tkinter import *
 
@@ -17,19 +16,33 @@ def getBytes(name: str, path) -> int:
     return os.stat(path + '\\' + name[0]).st_size
 
 
-def bytePrint(bytes: int, mag: str) -> str:
-    mag = mag.upper()
+def byteMag(bytes: int) -> str:
+    if bytes / pow(1024, 4) >= 1:
+        return "TB"
+    elif bytes / pow(1024, 3) >= 1:
+        return "GB"
+    elif bytes / pow(1024, 2) >= 1:
+        return "MB"
+    elif bytes / 1024 >= 1:
+        return "KB"
+    else:
+        return "B"
+
+
+def bytePrint(bytes: int) -> str:
+    mag = byteMag(bytes)
+    txt = "{:.2f}"
     match mag:
         case "KB":
-            return str(bytes / 1024) + " KB"
+            return txt.format(bytes / 1024) + " KB"
         case "MB":
-            return str(bytes / pow(1024, 2)) + " MB"
+            return txt.format(bytes / pow(1024, 2)) + " MB"
         case "GB":
-            return str(bytes / pow(1024, 3)) + " GB"
+            return txt.format(bytes / pow(1024, 3)) + " GB"
         case "TB":
-            return str(bytes / pow(1024, 4)) + " TB"
+            return txt.format(bytes / pow(1024, 4)) + " TB"
         case _:
-            return str(bytes) + " Bytes"
+            return txt.format(bytes) + " Bytes"
 
 
 def getFiles(criteria: str, path):
@@ -60,6 +73,9 @@ class Window:
         self.query_list = []
         self.root = root
         self.total_size = 0
+        self.byte_text = StringVar()
+        self.sort_asc = False
+        self.sort_styles = ["SIZE", "NAME"]
 
         self.root.title("File Counter")
 
@@ -89,11 +105,18 @@ class Window:
         go_button = Button(self.main_frame, text="Search", command=self.search)
         go_button.pack()
 
+        clear_button = Button(self.main_frame, text="Clear results", command=self.clear)
+        clear_button.pack()
+
+        self.byte_text.set(bytePrint(self.total_size))
+        total_size_label = Label(self.main_frame, textvariable=self.byte_text)
+        total_size_label.pack()
+
         root.bind("<Return>", lambda e: self.search)
 
     def search(self):
         files = getFiles(str(self.criteria.get()), str(self.path.get()))
-        if files == None:
+        if files is None:
             return
         elif len(files) <= 0:
             print("Nothing found")
@@ -102,17 +125,19 @@ class Window:
 
         for file in files:
             self.total_size += file[1]
-            self.listbox.insert(END, file[0] + " " + bytePrint(file[1], "KB"))
+            self.listbox.insert(END, file[0] + " " + bytePrint(file[1]))
+        self.byte_text.set(bytePrint(self.total_size))
 
     def clear(self):
         self.listbox.delete(0, END)
         self.total_size = 0
         self.all_files = []
         self.query_list = []
+        self.byte_text.set(bytePrint(self.total_size))
 
 
 root = Tk()
 
-Window(root)
+window = Window(root)
 
 root.mainloop()
